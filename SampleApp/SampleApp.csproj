@@ -1,20 +1,44 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+    <Import Project="TextLocalizer.props"/>
+
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <TextLocalizerTranslationsDir>Translations</TextLocalizerTranslationsDir>
+        <TextLocalizerDefaultLanguage>pl</TextLocalizerDefaultLanguage>
+        <TextLocalizerGenerateXmlDocs>true</TextLocalizerGenerateXmlDocs>
+        <TextLocalizerGenerateIdClass>true</TextLocalizerGenerateIdClass>
+    </PropertyGroup>
+
     <ItemGroup>
-        <AdditionalFiles Include="translations\english.yml" />
-        <AdditionalFiles Include="translations\polish.yml" />
-        <AdditionalFiles Include="translations\german.yml" />
+        <AdditionalFiles Include="translations/**/*.*" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="TextLocalizer" Version="1.2.0" />
+        <CompilerVisibleProperty Include="TextLocalizerTranslationsDir" />
+        <CompilerVisibleProperty Include="TextLocalizerDefaultLanguage" />
+        <CompilerVisibleProperty Include="TextLocalizerStrictMode" />
+        <CompilerVisibleProperty Include="TextLocalizerGenerateXmlDocs" />
+        <CompilerVisibleProperty Include="TextLocalizerEnableLogging" />
+        <CompilerVisibleProperty Include="TextLocalizerGenerateIdClass" />
+        <CompilerVisibleProperty Include="TextLocalizerIdClassName" />
     </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\TextLocalizer.Types\TextLocalizer.Types.csproj" />
+      <ProjectReference Include="..\TextLocalizer\TextLocalizer.csproj"
+                        OutputItemType="Analyzer"
+                        ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+<!--    <ItemGroup>-->
+<!--        <PackageReference Include="TextLocalizer" Version="1.2.0" />-->
+<!--    </ItemGroup>-->
 
 </Project>

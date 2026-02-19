@@ -1,0 +1,7 @@
+<Project>
+    <PropertyGroup>
+        <TextLocalizer_EnableLogging>false</TextLocalizer_EnableLogging>
+        <TextLocalizer_DefaultCulture>english</TextLocalizer_DefaultCulture>
+        <TextLocalizer_StrictMode>false</TextLocalizer_StrictMode>
+    </PropertyGroup>
+</Project>

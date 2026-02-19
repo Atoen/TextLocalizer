@@ -1,56 +1,19 @@
 using System.Text;
 using Microsoft.CodeAnalysis;
+using TextLocalizer.Translations;
 
 namespace TextLocalizer;
 
 using AllTranslationsData = Dictionary<string, Dictionary<string, string>>;
 
-internal static class SourceGenerationHelper
+internal static partial class SourceGenerationHelper
 {
     private const string TranslationProviderAttributeName = "TranslationProviderAttribute";
     private const string LocalizationTableAttributeName = "LocalizationTableAttribute";
 
-    public const string ProviderAttribute =
-        """
-        namespace TextLocalizer
-        {
-            [System.AttributeUsage(System.AttributeTargets.Class)]
-            public class TranslationProviderAttribute : System.Attribute
-            {
-                public required string Filename { get; set; }
-                
-                public bool IsDefault { get; set; }
-            }
-        }
-        """;
-
-    public const string LocalizationTableAttribute =
-        """
-        #nullable enable
-        
-        namespace TextLocalizer
-        {
-            [System.AttributeUsage(System.AttributeTargets.Class)]
-            public class LocalizationTableAttribute : System.Attribute
-            {
-                public required string CurrentProviderAccessor { get; set; }
-                
-                public required string DefaultProviderAccessor { get; set; }
-                
-                public string TableName { get; set; } = "Table";
-                
-                public bool GenerateDocs { get; set; } = true;
-                
-                public string? IdClassName { get; set; }
-            }
-        }
-        
-        #nullable restore
-        """;
-
-    public static Dictionary<string, IndexedLocalizedText> CreateIndexedLocalizedTextDictionary(Dictionary<string, LocalizedText> parsedLocalizedTexts)
+    public static TranslationDictionary CreateIndexedLocalizedTextDictionary(Dictionary<string, LocalizedText> parsedLocalizedTexts)
     {
-        var indexedDictionary = new Dictionary<string, IndexedLocalizedText>();
+        var dictionary = new TranslationDictionary();
         var index = 1;
 
         foreach (var pair in parsedLocalizedTexts)
@@ -62,54 +25,43 @@ internal static class SourceGenerationHelper
                 parsed.IsUntranslatable
             );
 
-            indexedDictionary[key] = indexedText;
+            dictionary[key] = indexedText;
             index++;
         }
 
-        return indexedDictionary;
+        return dictionary;
     }
 
     public static string GenerateProvider(
         StringBuilder builder,
-        TextProviderAttributeData textProvider,
-        Dictionary<string,
-        IndexedLocalizedText> dictionary)
+        GeneratorSettings settings,
+        ProviderData translationProvider,
+        TranslationDictionary2 dictionary)
     {
-        if (!textProvider.IsDefault)
+        if (!translationProvider.IsDefault)
         {
-            builder.Append("#nullable enable\n\n");
+            builder.Append(NullableEnable);
         }
 
         builder
-            .Append("using TextLocalizer.Types;\n\n")
-            .Append("namespace ").Append(textProvider.Namespace).Append('\n')
-            .Append("{\n")
-            .Append("    public partial class ").Append(textProvider.ClassName).Append(" : ILocalizedTextProvider\n")
-            .Append("    {\n")
-            .Append("        private readonly Dictionary<int, string> _dictionary = new()\n")
-            .Append("        {\n");
-
-        foreach (var value in dictionary.Values)
-        {
-            builder.Append("            { ").Append(value.Index).Append(", \"").Append(value.Text);
-            builder.Append(value.IsUntranslatable ? "\" }, // Untranslatable \n" : "\" },\n");
-        }
-
-        builder.Append("        };\n\n");
-
-        var accessor = textProvider.IsDefault
-            ? "public string this[int key] => _dictionary[key];\n"
-            : "public string? this[int key] => _dictionary.GetValueOrDefault(key);\n";
-
-        builder.Append("        ").Append(accessor);
+            .Append(UsingTypes)
+            .AppendNamespace(translationProvider.Namespace)
+            .Append(OpenBrace)
+            .AppendProviderClassName(translationProvider.ClassName)
+            .Append(Tab1 + OpenBrace)
+            .Append(Tab2 + DictionaryDeclaration)
+            .Append(Tab2 + OpenBrace)
+            .AppendDictionaryValues(dictionary)
+            .Append(Tab2 + "};\n\n")
+            .AppendAccessor(translationProvider.IsDefault);
 
         builder
-            .Append("    }\n")
-            .Append("}\n");
+            .Append(Tab1 + CloseBrace)
+            .Append(CloseBrace);
 
-        if (!textProvider.IsDefault)
+        if (!translationProvider.IsDefault)
         {
-           builder.Append("\n#nullable restore");
+           builder.Append(NullableRestore);
         }
 
         var result = builder.ToString();
@@ -120,23 +72,20 @@ internal static class SourceGenerationHelper
 
     public static string GenerateLocalizationTable(
         StringBuilder builder,
+        GeneratorSettings settings,
         TranslationTableAttributeData translationTable,
-        Dictionary<string, IndexedLocalizedText> defaultDictionary,
+        TranslationDictionary defaultDictionary,
         AllTranslationsData allTranslations)
     {
         builder
-            .Append("#nullable enable\n\n")
-            .Append("using TextLocalizer.Types;\n\n")
-            .Append("namespace ").Append(translationTable.Namespace).Append('\n')
-            .Append("{\n")
-            .Append("    public partial class ").Append(translationTable.ClassName).Append('\n')
-            .Append("    {\n")
-            .Append("        private TextTable? _table;\n")
-            .Append("        public TextTable ").Append(translationTable.TableName).Append(" => _table ??= new TextTable(this);\n\n")
-            .Append("        public class TextTable(").Append(translationTable.ClassName).Append(" outer)\n")
-            .Append("        {");
+            .Append(NullableEnable + UsingTypes)
+            .AppendNamespace(translationTable.Namespace)
+            .Append(OpenBrace)
+            .AppendTranslationTableClassName(translationTable.ClassName)
+            .Append(Tab1 + OpenBrace)
+            .AppendTextTableFieldCtor(translationTable.TableName, translationTable.ClassName);
 
-        if (!translationTable.GenerateDocs)
+        if (!settings.GenerateXmlDocs)
         {
             builder.Append('\n');
         }
@@ -144,21 +93,17 @@ internal static class SourceGenerationHelper
         foreach (var pair in defaultDictionary)
         {
             var (key, localizedText) = (pair.Key, pair.Value);
-            AppendTextProp(builder, key, localizedText, translationTable, allTranslations);
+            AppendTextProp(builder, settings, key, localizedText, translationTable, allTranslations);
         }
 
-        builder
-            .Append("\n            public string this[StringResourceId id]")
-            .Append(" => outer.").Append(translationTable.CurrentProviderAccessor)
-            .Append("[id] ?? outer.")
-            .Append(translationTable.DefaultProviderAccessor).Append("[id]!;\n");
+        builder.AppendIndexer(translationTable.CurrentProviderAccessor, translationTable.DefaultProviderAccessor);
 
-        builder.Append("        }\n");
+        builder.Append(Tab2 + CloseBrace);
 
         builder
-            .Append("    }\n")
-            .Append("}\n\n")
-            .Append("#nullable restore");
+            .Append(Tab1 + CloseBrace)
+            .Append(CloseBrace)
+            .Append(NullableRestore);
 
         var result = builder.ToString();
         builder.Clear();
@@ -168,6 +113,7 @@ internal static class SourceGenerationHelper
 
     private static void AppendTextProp(
         StringBuilder builder,
+        GeneratorSettings settings,
         string key,
         IndexedLocalizedText localizedText,
         TranslationTableAttributeData translationTable,
@@ -175,7 +121,7 @@ internal static class SourceGenerationHelper
     {
         if (localizedText.IsUntranslatable)
         {
-            if (translationTable.GenerateDocs)
+            if (settings.GenerateXmlDocs)
             {
                 builder.Append('\n');
                 builder.Append("            /// <summary>\n");
@@ -191,7 +137,7 @@ internal static class SourceGenerationHelper
         }
         else
         {
-            if (translationTable.GenerateDocs && allTranslations.TryGetValue(key, out var fileTranslations))
+            if (settings.GenerateXmlDocs && allTranslations.TryGetValue(key, out var fileTranslations))
             {
                 builder.Append('\n');
                 builder.Append("            /// <summary>\n");
@@ -225,20 +171,20 @@ internal static class SourceGenerationHelper
 
     public static string GenerateIdClass(
         StringBuilder builder,
+        GeneratorSettings settings,
         TranslationTableAttributeData translationTable,
         Dictionary<string, IndexedLocalizedText> defaultDictionary,
         AllTranslationsData allTranslations)
     {
 
         builder
-            .Append("#nullable enable\n\n")
-            .Append("using TextLocalizer.Types;\n\n")
+            .Append(NullableEnable + UsingTypes)
             .Append("namespace ").Append(translationTable.Namespace).Append("\n")
             .Append("{\n")
-            .Append("    public class ").Append(translationTable.IdClassName).Append('\n')
+            .Append("    public class ").Append(settings.IdClassName).Append('\n')
             .Append("    {");
 
-        if (!translationTable.GenerateDocs)
+        if (!settings.GenerateXmlDocs)
         {
             builder.Append('\n');
         }
@@ -246,7 +192,7 @@ internal static class SourceGenerationHelper
         foreach (var pair in defaultDictionary)
         {
             var (key, localizedText) = (pair.Key, pair.Value);
-            AppendIdProp(builder, key, localizedText, translationTable, allTranslations);
+            AppendIdProp(builder, settings, key, localizedText, allTranslations);
         }
 
         builder
@@ -262,12 +208,12 @@ internal static class SourceGenerationHelper
 
     private static void AppendIdProp(
         StringBuilder builder,
+        GeneratorSettings settings,
         string key,
         IndexedLocalizedText localizedText,
-        TranslationTableAttributeData translationTable,
         AllTranslationsData allTranslations)
     {
-        if (translationTable.GenerateDocs)
+        if (settings.GenerateXmlDocs)
         {
             if (localizedText.IsUntranslatable)
             {
@@ -305,7 +251,7 @@ internal static class SourceGenerationHelper
         builder.Append("        public static readonly StringResourceId ").Append(key).Append(" = new(").Append(localizedText.Index).Append(");\n");
     }
 
-    public static TextProviderAttributeData? CreateTranslationProviderInfo(INamedTypeSymbol classSymbol)
+    public static TranslationProviderAttributeData? CreateTranslationProviderInfo(INamedTypeSymbol classSymbol)
     {
         var attributeData = GetAttributeData(classSymbol, TranslationProviderAttributeName);
         if (attributeData is null) return null;
@@ -313,7 +259,7 @@ internal static class SourceGenerationHelper
         var @namespace = classSymbol.ContainingNamespace.ToString();
         var className = classSymbol.Name;
 
-        return new TextProviderAttributeData(@namespace, className, attributeData);
+        return new TranslationProviderAttributeData(@namespace, className, attributeData);
     }
 
     public static TranslationTableAttributeData? CreateLocalizationTableData(INamedTypeSymbol classSymbol)

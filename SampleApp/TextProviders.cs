@@ -2,11 +2,11 @@ using TextLocalizer;
 
 namespace SampleApp;
 
-[TranslationProvider(Filename = "english.yml", IsDefault = true)]
+[TranslationProvider(Language = "en")]
 public partial class EnglishTextProvider;
 
-[TranslationProvider(Filename = "polish.yml")]
+[TranslationProvider(Language = "pl")]
 public partial class PolishTextProvider;
 
-[TranslationProvider(Filename = "german.yml")]
+[TranslationProvider(Language = "de")]
 public partial class GermanTextProvider;

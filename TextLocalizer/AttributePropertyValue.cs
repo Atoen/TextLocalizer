@@ -36,23 +36,21 @@ internal record struct AttributePropertyValue<T>
     }
 }
 
-internal readonly record struct TextProviderAttributeData
+internal readonly record struct TranslationProviderAttributeData
 {
     public readonly string Namespace;
     public readonly string ClassName;
 
-    public readonly AttributePropertyValue<string> Filename = new(nameof(Filename), string.Empty);
-    public readonly AttributePropertyValue<bool> IsDefault = new(nameof(IsDefault), false);
+    public readonly AttributePropertyValue<string> Language = new(nameof(Language), string.Empty);
 
-    public TextProviderAttributeData(string @namespace, string className, AttributeData attributeData)
+    public TranslationProviderAttributeData(string @namespace, string className, AttributeData attributeData)
     {
         Namespace = @namespace;
         ClassName = className;
 
         foreach (var property in attributeData.NamedArguments)
         {
-            Filename.ReadIfEmpty(property);
-            IsDefault.ReadIfEmpty(property);
+            Language.ReadIfEmpty(property);
         }
     }
 }
@@ -65,8 +63,6 @@ internal readonly record struct TranslationTableAttributeData
     public readonly AttributePropertyValue<string> CurrentProviderAccessor = new(nameof(CurrentProviderAccessor), string.Empty);
     public readonly AttributePropertyValue<string> DefaultProviderAccessor = new(nameof(DefaultProviderAccessor), string.Empty);
     public readonly AttributePropertyValue<string> TableName = new(nameof(TableName), "Table");
-    public readonly AttributePropertyValue<bool> GenerateDocs = new(nameof(GenerateDocs), true);
-    public readonly AttributePropertyValue<string?> IdClassName = new(nameof(IdClassName), null);
 
     public TranslationTableAttributeData(string @namespace, string className, AttributeData attributeData)
     {
@@ -78,8 +74,6 @@ internal readonly record struct TranslationTableAttributeData
             CurrentProviderAccessor.ReadIfEmpty(property);
             DefaultProviderAccessor.ReadIfEmpty(property);
             TableName.ReadIfEmpty(property);
-            GenerateDocs.ReadIfEmpty(property);
-            IdClassName.ReadIfEmpty(property);
         }
     }
 

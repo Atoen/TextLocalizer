@@ -5,56 +5,45 @@ namespace TextLocalizer;
 
 internal static class DiagnosticsHelper
 {
-    public static void ReportMissingKeyDiagnostic(
-        this SourceProductionContext context,
-        TranslationsProviderData providerData,
-        string key)
+    extension(SourceProductionContext context)
     {
-        var location = Location.Create(providerData.File.Path, new TextSpan(), new LinePositionSpan());
+        public void ReportMissingKeyDiagnostic(TranslationsProviderData providerData, string key)
+        {
+            var location = Location.Create(providerData.File.Path, new TextSpan(), new LinePositionSpan());
 
-        var diagnostic = Diagnostic.Create(
-            MissingKeyDescriptor,
-            location,
-            key, providerData.File.Name
-        );
+            var diagnostic = Diagnostic.Create(
+                MissingKeyDescriptor,
+                location,
+                key, providerData.File.Name);
 
-        context.ReportDiagnostic(diagnostic);
-    }
+            context.ReportDiagnostic(diagnostic);
+        }
 
-    public static void ReportUntranslatableKeyDiagnostic(
-        this SourceProductionContext context,
-        TranslationsProviderData providerData,
-        string key,
-        int lineNumber)
-    {
-        var linePosition = new LinePosition(lineNumber, 0);
-        var location = Location.Create(providerData.File.Path, new TextSpan(), new LinePositionSpan(linePosition, linePosition));
+        public void ReportUntranslatableKeyDiagnostic(TranslationsProviderData providerData, string key, int lineNumber)
+        {
+            var linePosition = new LinePosition(lineNumber, 0);
+            var location = Location.Create(providerData.File.Path, new TextSpan(), new LinePositionSpan(linePosition, linePosition));
 
-        var diagnostic = Diagnostic.Create(
-            UntranslatableKeyDescriptor,
-            location,
-            providerData.File.Name, key
-        );
+            var diagnostic = Diagnostic.Create(
+                UntranslatableKeyDescriptor,
+                location,
+                providerData.File.Name, key);
 
-        context.ReportDiagnostic(diagnostic);
-    }
+            context.ReportDiagnostic(diagnostic);
+        }
 
-    public static void ReportExtraKeyDiagnostic(
-        this SourceProductionContext context,
-        TranslationsProviderData providerData,
-        string key,
-        int lineNumber)
-    {
-        var linePosition = new LinePosition(lineNumber, 0);
-        var location = Location.Create(providerData.File.Path, new TextSpan(), new LinePositionSpan(linePosition, linePosition));
+        public void ReportExtraKeyDiagnostic(TranslationsProviderData providerData, string key, int lineNumber)
+        {
+            var linePosition = new LinePosition(lineNumber, 0);
+            var location = Location.Create(providerData.File.Path, new TextSpan(), new LinePositionSpan(linePosition, linePosition));
 
-        var diagnostic = Diagnostic.Create(
-            ExtraKeyDescriptor,
-            location,
-            providerData.File.Name, key
-        );
+            var diagnostic = Diagnostic.Create(
+                ExtraKeyDescriptor,
+                location,
+                providerData.File.Name, key);
 
-        context.ReportDiagnostic(diagnostic);
+            context.ReportDiagnostic(diagnostic);
+        }
     }
 
     private static readonly DiagnosticDescriptor MissingKeyDescriptor = new(
