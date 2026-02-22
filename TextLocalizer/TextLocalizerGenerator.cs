@@ -4,17 +4,47 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 using TextLocalizer.Parsing;
 using TextLocalizer.Translations;
+using TextLocalizer.Types;
 
 namespace TextLocalizer;
 
 [Generator]
 internal class TextLocalizerGenerator : IIncrementalGenerator
 {
+    internal static readonly StringBuilder ErrorBuilder = new();
+    
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
+        ErrorBuilder.Clear();
+        
         var settings = context.AnalyzerConfigOptionsProvider
             .Select((config, _) => GeneratorSettings.ReadFromConfig(config.GlobalOptions));
+        
+        try
+        {
+            PipeLine(context, settings);
+        }
+        catch (Exception e)
+        {
+            ErrorBuilder.Append(e);
+            context.RegisterSourceOutput(settings, static (productionContext, settings) =>
+            {
+                productionContext.AddSource("Errors.g.cs", "/*" + ErrorBuilder + settings + "*/");
+            });
+        }
 
+        if (ErrorBuilder.Length > 0)
+        {
+            context.RegisterSourceOutput(settings, static (productionContext, settings) =>
+            {
+                productionContext.AddSource("Errors.g.cs", "/*" + ErrorBuilder + settings + "*/");
+            });
+        }
+    }
+
+    private static void PipeLine(IncrementalGeneratorInitializationContext context,
+        IncrementalValueProvider<GeneratorSettings> settings)
+    {
         context.RegisterPostInitializationOutput(AddAttributeTypes);
 
         var translationFiles = PrepareTranslationFiles(context);
@@ -35,7 +65,7 @@ internal class TextLocalizerGenerator : IIncrementalGenerator
             .Select((data, _) => AggregateData(data));
 
         context.RegisterSourceOutput(
-            aggregatedData.Combine(settings),
+            aggregatedData,
             static (productionContext, data) => GenerateClasses(data, productionContext)
         );
     }
@@ -82,11 +112,11 @@ internal class TextLocalizerGenerator : IIncrementalGenerator
             .Select(static (x, _) => x.FirstOrDefault());
     }
 
-    private static Dictionary<string, AggregatedTranslationData> AggregateData(CombinedGeneratorData generatorData)
+    private static Data2<string> AggregateData(CombinedGeneratorData generatorData)
     {
+        var translations = new Dictionary<string, AggregatedTranslationData<string>>(generatorData.TranslationProviders.Length);
         var settings = generatorData.GeneratorSettings;
-        var translations = new Dictionary<string, AggregatedTranslationData>(generatorData.TranslationProviders.Length);
-
+        
         foreach (var translationFile in generatorData.TranslationFiles)
         {
             var fileLanguage = translationFile.Language;
@@ -99,12 +129,12 @@ internal class TextLocalizerGenerator : IIncrementalGenerator
                     .First(x => x.Language == fileLanguage);
 
                 var provider = new ProviderData(providerAttribute.Namespace, providerAttribute.ClassName, isDefault);
-                var translationData = new AggregatedTranslationData(translationFile.Language, isDefault, provider);
+                var translationData = new AggregatedTranslationData<string>(translationFile.Language, isDefault, provider);
 
                 translations.Add(translationFile.Language, translationData);
             }
 
-            var module = new TranslationModule(translationFile.ModuleName, translationFile.Path);
+            var module = new TranslationModule<string>(translationFile.ModuleName, translationFile.Path);
             translations[fileLanguage].Modules[translationFile.ModuleName] = module;
 
             foreach (var entry in translationFile.Entries)
@@ -114,58 +144,221 @@ internal class TextLocalizerGenerator : IIncrementalGenerator
             }
         }
 
-        return translations;
+        var table = new TableData(
+            generatorData.TranslationTable?.Namespace,
+            generatorData.TranslationTable?.ClassName,
+            generatorData.TranslationTable?.TableName);
+
+        return new Data2<string>(table, translations, settings);
     }
 
-    private static void GenerateClasses((Dictionary<string, AggregatedTranslationData>, GeneratorSettings) tuple, SourceProductionContext context)
+    // private static Data2<int> IndexData(Data2<string> data, SourceProductionContext context)
+    // {
+    //     var defaultTranslations = data.Translations.Single(x => x.Value.IsDefault).Value;
+    //     var nonDefaultTranslations = data.Translations
+    //         .Where(x => !x.Value.IsDefault)
+    //         .Select(x => x.Value)
+    //         .ToArray();
+    //     
+    //     var indexedTranslations = new Dictionary<string, AggregatedTranslationData<int>>(data.Translations.Count);
+    //         
+    //     var indexedDefault = defaultTranslations.ToKey<int>();
+    //
+    //     var index = 1;
+    //     var moduleMissing = false;
+    //     foreach (var module in defaultTranslations.Modules.Values)
+    //     {
+    //         var indexedModule = new TranslationModule<int>(module.Name, module.SourceFilePath);
+    //         indexedDefault.Modules[module.Name] = indexedModule;
+    //
+    //         foreach (var translation in nonDefaultTranslations)
+    //         {
+    //             if (!translation.Modules.ContainsKey(indexedModule.Name))
+    //             {
+    //                 // missing module
+    //                 //context.ReportMissingModuleDiagnostic("", indexedDefault.Language, indexedModule.Name);
+    //                 moduleMissing = true;
+    //             }
+    //         }
+    //         
+    //         foreach (var text in module.Texts.Values)
+    //         {
+    //             var resourceId = index++;
+    //
+    //             indexedModule.Texts[resourceId] = text;
+    //
+    //             if (!moduleMissing)
+    //             {
+    //                 foreach (var translation in nonDefaultTranslations)
+    //                 {
+    //                     if (!translation.Modules[indexedModule.Name].Texts.ContainsKey(text.Key))
+    //                     {
+    //                         context.ReportMissingKeyDiagnostic(
+    //                             translation.Modules[indexedModule.Name].SourceFilePath,
+    //                             translation.Modules[indexedModule.Name].Name,
+    //                             text.Key
+    //                             );
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    //
+    //     indexedTranslations[indexedDefault.Language] = indexedDefault;
+    //
+    //     foreach (var translations in data.Translations.Values)
+    //     {
+    //         if (translations.IsDefault) continue;
+    //         
+    //         var indexed = translations.ToKey<int>();
+    //
+    //         foreach (var module in indexedDefault.Modules.Values)
+    //         {
+    //             var a = indexed.Modules[module.Name] = new TranslationModule<int>(module.Name, module.SourceFilePath);
+    //             
+    //             foreach (var textKvp in module.Texts)
+    //             {
+    //                 if (translations.Modules[module.Name].Texts.TryGetValue(textKvp.Value.Key, out var dd))
+    //                 {
+    //                     var id = textKvp.Key;
+    //                     a.Texts[id] = dd;
+    //                 }
+    //             }
+    //         }
+    //     }
+    //
+    //     return new Data2<int>(data.TableData, indexedTranslations, data.GeneratorSettings);
+    // }
+    
+    private static Data2<int> IndexData(Data2<string> data, SourceProductionContext context)
+{
+    var defaultTranslations = data.Translations.Single(x => x.Value.IsDefault).Value;
+    var nonDefaultTranslations = data.Translations
+        .Where(x => !x.Value.IsDefault)
+        .Select(x => x.Value)
+        .ToArray();
+
+    var indexedTranslations = new Dictionary<string, AggregatedTranslationData<int>>(data.Translations.Count);
+
+    var indexedDefault = defaultTranslations.ToKey<int>();
+
+    // Key → ID map per module
+    var moduleKeyIndex = new Dictionary<string, Dictionary<string, int>>();
+
+    var nextId = 1;
+
+    foreach (var module in defaultTranslations.Modules.Values)
     {
-        var (translations, settings) = tuple;
+        var indexedModule = new TranslationModule<int>(module.Name, module.SourceFilePath);
+        indexedDefault.Modules[module.Name] = indexedModule;
 
+        var keyMap = moduleKeyIndex[module.Name] = new Dictionary<string, int>();
+
+        // Validate module existence early
+        foreach (var translation in nonDefaultTranslations)
+        {
+            if (!translation.Modules.ContainsKey(module.Name))
+            {
+                // context.ReportMissingModuleDiagnostic(
+                //     translation.SourceFilePath,
+                //     translation.Language,
+                //     module.Name);
+            }
+        }
+
+        foreach (var text in module.Texts.Values)
+        {
+            var id = nextId++;
+
+            keyMap[text.Key] = id;
+            indexedModule.Texts[id] = text;
+
+            // Validate key existence
+            foreach (var translation in nonDefaultTranslations)
+            {
+                if (translation.Modules.TryGetValue(module.Name, out var trModule))
+                {
+                    if (!trModule.Texts.ContainsKey(text.Key))
+                    {
+                        context.ReportMissingKeyDiagnostic(
+                            trModule.SourceFilePath,
+                            trModule.Name,
+                            text.Key);
+                    }
+                }
+            }
+        }
+    }
+
+    indexedTranslations[indexedDefault.Language] = indexedDefault;
+
+    // Rebuild non-default translations using ID map
+    foreach (var translations in nonDefaultTranslations)
+    {
+        var indexed = translations.ToKey<int>();
+
+        foreach (var defaultModule in indexedDefault.Modules.Values)
+        {
+            var rebuiltModule = indexed.Modules[defaultModule.Name] =
+                new TranslationModule<int>(defaultModule.Name, defaultModule.SourceFilePath);
+
+            if (!translations.Modules.TryGetValue(defaultModule.Name, out var sourceModule))
+                continue;
+
+            var keyMap = moduleKeyIndex[defaultModule.Name];
+
+            foreach (var text in sourceModule.Texts.Values)
+            {
+                if (keyMap.TryGetValue(text.Key, out var id))
+                {
+                    rebuiltModule.Texts[id] = text;
+                }
+            }
+        }
+
+        indexedTranslations[indexed.Language] = indexed;
+    }
+
+    return new Data2<int>(data.TableData, indexedTranslations, data.GeneratorSettings);
+}
+    
+    private static void GenerateClasses(Data2<string> data, SourceProductionContext context)
+    {
+        //   Generator „TextLocalizerGenerator” nie mógł wygenerować źródła. W rezultacie nie będzie on współtworzyć danych wyjściowych i mogą wystąpić błędy kompilacji. Wyjątek był typu „FileNotFoundException” z komunikatem „Could not load file or assembly 'TextLocalizer.Types, Version=1.0.3.0, Culture=neutral, PublicKeyToken=null'. Nie można odnaleźć określonego pliku.”.
+
+        var data2 = IndexData(data, context);
+        
+        var translations = data2.Translations;
+        var settings = data2.GeneratorSettings;
+        var table = data2.TableData;
+        
+        if (!translations.TryGetValue(settings.DefaultLanguage, out var defaultTranslation))
+        {
+            ErrorBuilder.Append("No default translation found");
+            return;
+        }
+        
         var builder = new StringBuilder();
-
+        
+        var translationTableCode = SourceGenerationHelper.GenerateTranslationTable(builder, settings, table, defaultTranslation);
+        context.AddSource("TranslationTable.g.cs", translationTableCode);
+        
         foreach (var translation in translations.Values)
         {
             var provider = translation.ProviderData;
             var hintName = $"{provider.ClassName}.g.cs";
-            var dictionary = new TranslationDictionary2();
-
+            var dictionary = new Dictionary<string, Dictionary<int, TranslationText>>();
+        
             foreach (var module in translation.Modules.Values)
             {
-                var moduleDictionary = dictionary[module.Name] = new Dictionary<string, TranslationText>();
-                foreach (var text in module.Texts.Values)
+                var moduleDictionary = dictionary[module.Name] = new Dictionary<int, TranslationText>();
+                foreach (var textKvp in module.Texts)
                 {
-                    moduleDictionary[text.Key] = text;
+                    moduleDictionary[textKvp.Key] = textKvp.Value;
                 }
             }
-
+        
             var providerCode = SourceGenerationHelper.GenerateProvider(builder, settings, provider, dictionary);
-
-
-
-            // var builder = new StringBuilder();
-            // builder.Append("/*\n");
-            //
-            // builder.Append("Generate XML: ").AppendLine(settings.GenerateXmlDocs.ToString());
-            // builder.Append("Generate ID class: ").AppendLine(settings.GenerateIdClass.ToString());
-            //
-            // var provider = translation.ProviderData;
-            // builder.Append(provider.Namespace).Append(" : ").AppendLine(provider.ClassName);
-            //
-            // builder.Append("Language: ").AppendLine(translation.Language);
-            // builder.Append("Is default: ").AppendLine(translation.IsDefault.ToString());
-            //
-            // foreach (var module in translation.Modules.Values)
-            // {
-            //     builder.Append("Module ").AppendLine(module.Name);
-            //
-            //     foreach (var text in module.Texts.Values)
-            //     {
-            //         builder.Append("     ").Append(text.Key).Append(": ").AppendLine(text.Value);
-            //     }
-            // }
-            //
-            // builder.Append("*/");
-
             context.AddSource(hintName, providerCode);
         }
     }
@@ -260,7 +453,7 @@ internal class TextLocalizerGenerator : IIncrementalGenerator
             {
                 if (defaultValue.IsUntranslatable)
                 {
-                    context.ReportUntranslatableKeyDiagnostic(providerData, key, localizedValue.LineNumber);
+                    // context.ReportUntranslatableKeyDiagnostic(providerData, key, localizedValue.LineNumber);
                 }
                 else
                 {
@@ -269,7 +462,7 @@ internal class TextLocalizerGenerator : IIncrementalGenerator
             }
             else if (!defaultValue.IsUntranslatable)
             {
-                context.ReportMissingKeyDiagnostic(providerData, key);
+                // context.ReportMissingKeyDiagnostic(providerData, key);
             }
         }
 

@@ -2,6 +2,12 @@
 
 var localization = new Localization();
 
+var a = localization.R.Main.HelloWorld;
+
+var b = localization.R.UserStatus;
+
+var c = b.ToString();
+
 // var a = R5.evening;
 //
 // //var farewellId = R2.farewell;

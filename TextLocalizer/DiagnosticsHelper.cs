@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
+using TextLocalizer.Translations;
 
 namespace TextLocalizer;
 
@@ -7,27 +8,40 @@ internal static class DiagnosticsHelper
 {
     extension(SourceProductionContext context)
     {
-        public void ReportMissingKeyDiagnostic(TranslationsProviderData providerData, string key)
+        
+        public void ReportMissingModuleDiagnostic(string filename, string language, string moduleName)
         {
-            var location = Location.Create(providerData.File.Path, new TextSpan(), new LinePositionSpan());
+            var location = Location.Create(filename, new TextSpan(), new LinePositionSpan());
+
+            var diagnostic = Diagnostic.Create(
+                MissingModuleDescriptor,
+                location,
+                moduleName, language);
+
+            context.ReportDiagnostic(diagnostic);
+        }
+        
+        public void ReportMissingKeyDiagnostic(string filename, string module, string key)
+        {
+            var location = Location.Create(filename, new TextSpan(), new LinePositionSpan());
 
             var diagnostic = Diagnostic.Create(
                 MissingKeyDescriptor,
                 location,
-                key, providerData.File.Name);
+                key, filename);
 
             context.ReportDiagnostic(diagnostic);
         }
 
-        public void ReportUntranslatableKeyDiagnostic(TranslationsProviderData providerData, string key, int lineNumber)
+        public void ReportUntranslatableKeyDiagnostic(string filename, string module, string key, int lineNumber)
         {
             var linePosition = new LinePosition(lineNumber, 0);
-            var location = Location.Create(providerData.File.Path, new TextSpan(), new LinePositionSpan(linePosition, linePosition));
+            var location = Location.Create(filename, new TextSpan(), new LinePositionSpan(linePosition, linePosition));
 
             var diagnostic = Diagnostic.Create(
                 UntranslatableKeyDescriptor,
                 location,
-                providerData.File.Name, key);
+                module, key);
 
             context.ReportDiagnostic(diagnostic);
         }
@@ -69,6 +83,15 @@ internal static class DiagnosticsHelper
         title: "Untranslatable key is localized",
         messageFormat: "File {0} contains key '{1}', which is marked as untranslatable",
         category: "DictionaryComparison",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true
+    );
+    
+    private static readonly DiagnosticDescriptor MissingModuleDescriptor = new(
+        id: "TL004",
+        title: "Missing translation module in non-default language",
+        messageFormat: "The module '{0}' is missing in {1} language directory",
+        category: "TranslationModules",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );

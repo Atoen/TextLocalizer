@@ -87,9 +87,9 @@ public partial class Localization
     public SupportedLanguage Language { get; set; } = DefaultLanguage;
     
     // Using the generated id class
-    public string StringResource(StringResourceId id) => R[id];
+    public string StringResource(int id) => R[id];
 
-    public string StringResource(StringResourceId id, object? arg0)
+    public string StringResource(int id, object? arg0)
     {
         return string.Format(R[id], arg0);
     }

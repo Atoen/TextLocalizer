@@ -1,18 +1,20 @@
+using TextLocalizer;
 using TextLocalizer.Types;
 
 namespace SampleApp;
 
-// [LocalizationTable(
-//     CurrentProviderAccessor = nameof(Provider),
-//     DefaultProviderAccessor = nameof(DefaultProvider),
-//     TableName = "R"
-// )]
+[LocalizationTable(
+    CurrentProviderAccessor = nameof(Provider),
+    DefaultProviderAccessor = nameof(DefaultProvider),
+    TableName = "R"
+)]
 public partial class Localization
 {
     private readonly Dictionary<SupportedLanguage, ILocalizedTextProvider> _textProviders = new();
     //
     // public static SupportedLanguage DefaultLanguage { get; set; } = SupportedLanguage.English;
     //
+    //   Generator „TextLocalizerGenerator” nie mógł wygenerować źródła. W rezultacie nie będzie on współtworzyć danych wyjściowych i mogą wystąpić błędy kompilacji. Wyjątek był typu „FileNotFoundException” z komunikatem „Could not load file or assembly 'TextLocalizer.Types, Version=1.0.3.0, Culture=neutral, PublicKeyToken=null'. Nie można odnaleźć określonego pliku.”.
     // public SupportedLanguage Language { get; private set; } = DefaultLanguage;
     // public CultureInfo CultureInfo { get; private set; } = CultureInfo.GetCultureInfoByIetfLanguageTag(DefaultLanguage.Tag);
     //
@@ -58,8 +60,8 @@ public partial class Localization
     //     _ => throw new ArgumentOutOfRangeException(nameof(language))
     // };
     //
-    // private ILocalizedTextProvider Provider => GetLanguageProvider(Language);
-    // private ILocalizedTextProvider DefaultProvider => GetLanguageProvider(DefaultLanguage);
+    private ILocalizedTextProvider Provider => GetLanguageProvider(Language);
+    private ILocalizedTextProvider DefaultProvider => GetLanguageProvider(DefaultLanguage);
     //
     // private ILocalizedTextProvider GetLanguageProvider(SupportedLanguage language)
     // {

@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.CodeAnalysis;
 using TextLocalizer.Translations;
+using TextLocalizer.Types;
 
 namespace TextLocalizer;
 
@@ -36,7 +37,7 @@ internal static partial class SourceGenerationHelper
         StringBuilder builder,
         GeneratorSettings settings,
         ProviderData translationProvider,
-        TranslationDictionary2 dictionary)
+        Dictionary<string, Dictionary<int, TranslationText>> dictionary)
     {
         if (!translationProvider.IsDefault)
         {
@@ -70,12 +71,12 @@ internal static partial class SourceGenerationHelper
         return result;
     }
 
-    public static string GenerateLocalizationTable(
-        StringBuilder builder,
-        GeneratorSettings settings,
-        TranslationTableAttributeData translationTable,
-        TranslationDictionary defaultDictionary,
-        AllTranslationsData allTranslations)
+    public static string GenerateTranslationTable(StringBuilder builder,
+            GeneratorSettings settings,
+            TableData translationTable,
+            AggregatedTranslationData<int> defaultTranslation)
+        // TranslationDictionary defaultDictionary,
+        //AllTranslationsData allTranslations)
     {
         builder
             .Append(NullableEnable + UsingTypes)
@@ -83,20 +84,40 @@ internal static partial class SourceGenerationHelper
             .Append(OpenBrace)
             .AppendTranslationTableClassName(translationTable.ClassName)
             .Append(Tab1 + OpenBrace)
-            .AppendTextTableFieldCtor(translationTable.TableName, translationTable.ClassName);
+            .AppendTextTableFieldCtor(translationTable.Name, translationTable.ClassName);
 
-        if (!settings.GenerateXmlDocs)
-        {
+        // if (!settings.GenerateXmlDocs)
+        // {
             builder.Append('\n');
-        }
+        // }
 
-        foreach (var pair in defaultDictionary)
+        foreach (var moduleKvp in defaultTranslation.Modules)
         {
-            var (key, localizedText) = (pair.Key, pair.Value);
-            AppendTextProp(builder, settings, key, localizedText, translationTable, allTranslations);
+            var moduleName = moduleKvp.Key;
+            builder.Append(Tab3 + "public __").Append(moduleName).Append(' ').Append(moduleName)
+                .Append(" = new(outer);\n");
+            
+            builder.Append(Tab3 + "public class __").Append(moduleName)
+                .Append('(').Append(translationTable.ClassName).Append(' ').Append("outer").Append(")\n");
+            builder.Append(Tab3 + OpenBrace);
+
+            foreach (var textKvp in moduleKvp.Value.Texts)
+            {
+                var (key, value) = (textKvp.Key, textKvp.Value);
+                builder.Append(Tab4 + "public string ").Append(key)
+                    .Append(" => outer.Provider[").Append(key).Append("];\n");
+            }
+            
+            builder.Append(Tab3 + CloseBrace + '\n');
         }
 
-        builder.AppendIndexer(translationTable.CurrentProviderAccessor, translationTable.DefaultProviderAccessor);
+        // foreach (var pair in defaultDictionary)
+        // {
+        //     var (key, localizedText) = (pair.Key, pair.Value);
+        //     AppendTextProp(builder, settings, key, localizedText, translationTable, allTranslations);
+        // }
+
+        // builder.AppendIndexer(translationTable.CurrentProviderAccessor, translationTable.DefaultProviderAccessor);
 
         builder.Append(Tab2 + CloseBrace);
 
@@ -248,7 +269,7 @@ internal static partial class SourceGenerationHelper
             }
         }
 
-        builder.Append("        public static readonly StringResourceId ").Append(key).Append(" = new(").Append(localizedText.Index).Append(");\n");
+        builder.Append("        public static readonly int ").Append(key).Append(" = new(").Append(localizedText.Index).Append(");\n");
     }
 
     public static TranslationProviderAttributeData? CreateTranslationProviderInfo(INamedTypeSymbol classSymbol)
@@ -264,6 +285,8 @@ internal static partial class SourceGenerationHelper
 
     public static TranslationTableAttributeData? CreateLocalizationTableData(INamedTypeSymbol classSymbol)
     {
+        
+        
         var attributeData = GetAttributeData(classSymbol, LocalizationTableAttributeName);
         if (attributeData is null) return null;
 

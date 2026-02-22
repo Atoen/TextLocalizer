@@ -1,4 +1,5 @@
 using System.Text;
+using TextLocalizer.Translations;
 using TextLocalizer.Types;
 
 namespace TextLocalizer;
@@ -40,6 +41,7 @@ internal static partial class SourceGenerationHelper
     private const string Tab1 = "    ";
     private const string Tab2 = Tab1 + Tab1;
     private const string Tab3 = Tab2 + Tab1;
+    private const string Tab4 = Tab3 + Tab1;
 
     private const string OpenBrace = "{\n";
     private const string CloseBrace = "}\n";
@@ -48,7 +50,7 @@ internal static partial class SourceGenerationHelper
     private const string NullableRestore = "\n#nullable restore\n";
     private const string UsingTypes = "using TextLocalizer.Types;\n\n";
 
-    private const string DictionaryDeclaration = "private readonly Dictionary<StringResourceId, string> _dictionary = new()\n";
+    private const string DictionaryDeclaration = "private readonly Dictionary<int, string> _dictionary = new()\n";
 
     extension(StringBuilder builder)
     {
@@ -71,7 +73,7 @@ internal static partial class SourceGenerationHelper
                 .Append('\n');
         }
 
-        public StringBuilder AppendDictionaryValues(TranslationDictionary2 dictionary)
+        public StringBuilder AppendDictionaryValues(Dictionary<string, Dictionary<int, TranslationText>> dictionary)
         {
             foreach (var kvp in dictionary)
             {
@@ -99,23 +101,23 @@ internal static partial class SourceGenerationHelper
 
         public StringBuilder AppendAccessor(bool isDefaultProvider)
         {
-            const string @default = "public string this[StringResourceId key] => _dictionary[key];\n";
-            const string nonDefault = "public string? this[StringResourceId key] => _dictionary.GetValueOrDefault(key);\n";
+            const string @default = "public string this[int key] => _dictionary[key];\n";
+            const string nonDefault = "public string? this[int key] => _dictionary.GetValueOrDefault(key);\n";
 
             return isDefaultProvider ? builder.Append(Tab2 + @default) : builder.Append(Tab2 + nonDefault);
         }
 
         public StringBuilder AppendTextTableFieldCtor(string tableName, string className)
         {
-            builder.Append(Tab2 + "private TextTable? _table;\n");
+            builder.Append(Tab2 + "private __TextTable? _table;\n");
 
             builder
-                .Append(Tab2 + "public TextTable ")
+                .Append(Tab2 + "public __TextTable ")
                 .Append(tableName)
-                .Append(" => _table ??= new TextTable(this);\n\n");
+                .Append(" => _table ??= new __TextTable(this);\n\n");
 
             builder
-                .Append(Tab2 + "public class TextTable(")
+                .Append(Tab2 + "public class __TextTable(")
                 .Append(className)
                 .Append(" outer)\n");
 
@@ -127,7 +129,7 @@ internal static partial class SourceGenerationHelper
         public StringBuilder AppendIndexer(string currentProviderName, string defaultProviderName)
         {
             return builder
-                .Append('\n' + Tab3 + "public string this[StringResourceId id]")
+                .Append('\n' + Tab3 + "public string this[int id]")
                 .Append(" => outer.")
                 .Append(currentProviderName)
                 .Append("[id] ?? outer.")
