@@ -1,7 +1,6 @@
 using System.Text;
 using Microsoft.CodeAnalysis;
 using TextLocalizer.Translations;
-using TextLocalizer.Types;
 
 namespace TextLocalizer;
 
@@ -71,13 +70,16 @@ internal static partial class SourceGenerationHelper
         return result;
     }
 
-    public static string GenerateTranslationTable(StringBuilder builder,
-            GeneratorSettings settings,
-            TableData translationTable,
-            AggregatedTranslationData<int> defaultTranslation)
-        // TranslationDictionary defaultDictionary,
-        //AllTranslationsData allTranslations)
+    public static string GenerateTranslationTable(
+        StringBuilder builder,
+        GeneratorSettings settings,
+        CombinedTranslations<int> translations)
     {
+        if (translations is not { MainTranslation: { } mainTranslation, Table: { } translationTable })
+        {
+            return "// Failed to generate Translation table\n";
+        }
+
         builder
             .Append(NullableEnable + UsingTypes)
             .AppendNamespace(translationTable.Namespace)
@@ -91,33 +93,57 @@ internal static partial class SourceGenerationHelper
             builder.Append('\n');
         // }
 
-        foreach (var moduleKvp in defaultTranslation.Modules)
+        foreach (var module in mainTranslation.Modules)
         {
-            var moduleName = moduleKvp.Key;
-            builder.Append(Tab3 + "public __").Append(moduleName).Append(' ').Append(moduleName)
-                .Append(" = new(outer);\n");
-            
-            builder.Append(Tab3 + "public class __").Append(moduleName)
+            builder.Append(Tab3 + "public __").Append(module.Name).Append(' ').Append(module.Name).Append(" = new(outer);\n");
+
+            builder.Append(Tab3 + "public class __").Append(module.Name)
                 .Append('(').Append(translationTable.ClassName).Append(' ').Append("outer").Append(")\n");
+
             builder.Append(Tab3 + OpenBrace);
 
-            foreach (var textKvp in moduleKvp.Value.Texts)
+            foreach (var text in module.Texts)
             {
-                var (key, value) = (textKvp.Key, textKvp.Value);
-                builder.Append(Tab4 + "public string ").Append(key)
-                    .Append(" => outer.Provider[").Append(key).Append("];\n");
+                if (settings.GenerateXmlDocs)
+                {
+                    AddXml(builder, text, settings, translations);
+                }
+
+                builder.Append(Tab4 + "public string ").Append(text.SourceKey)
+                    .Append(" => outer.Provider[").Append(text.Key)
+                    .Append("] ?? outer.DefaultProvider[").Append(text.Key).Append("]!;\n");
             }
-            
+
             builder.Append(Tab3 + CloseBrace + '\n');
         }
 
-        // foreach (var pair in defaultDictionary)
+        // foreach (var moduleKvp in mainTranslation.Modules)
         // {
-        //     var (key, localizedText) = (pair.Key, pair.Value);
-        //     AppendTextProp(builder, settings, key, localizedText, translationTable, allTranslations);
+        //     var moduleName = moduleKvp.Key;
+        //     builder.Append(Tab3 + "public __").Append(moduleName).Append(' ').Append(moduleName)
+        //         .Append(" = new(outer);\n");
+        //
+        //     builder.Append(Tab3 + "public class __").Append(moduleName)
+        //         .Append('(').Append(translationTable.ClassName).Append(' ').Append("outer").Append(")\n");
+        //     builder.Append(Tab3 + OpenBrace);
+        //
+        //     foreach (var textKvp in moduleKvp.Value.Texts)
+        //     {
+        //         var (key, value) = (textKvp.Key, textKvp.Value);
+        //         builder.Append(Tab4 + "public string ").Append(key)
+        //             .Append(" => outer.Provider[").Append(key).Append("];\n");
+        //     }
+        //
+        //     builder.Append(Tab3 + CloseBrace + '\n');
         // }
 
-        // builder.AppendIndexer(translationTable.CurrentProviderAccessor, translationTable.DefaultProviderAccessor);
+        // foreach (var pair in mainTranslation)
+        // {
+        //     var (key, localizedText) = (pair.Key, pair.Value);
+        // AppendTextProp(builder, settings, key, localizedText, translationTable, allTranslations);
+        // }
+
+        builder.AppendIndexer("Provider", "DefaultProvider");
 
         builder.Append(Tab2 + CloseBrace);
 
@@ -130,6 +156,62 @@ internal static partial class SourceGenerationHelper
         builder.Clear();
 
         return result;
+
+        static void AddXml(StringBuilder builder,
+            TranslationText2<int> text,
+            GeneratorSettings settings,
+            CombinedTranslations<int> translations)
+        {
+            builder.Append('\n' + Tab4 + "/// <summary>\n");
+
+            if (text.IsTemplated || true)
+            {
+                // builder.Append(Tab4 + "/// Templated\n");
+            }
+
+            if (text.IsUntranslatable)
+            {
+                builder
+                    .Append(Tab4 + "/// <i>Marked as untranslatable.</i><br/>\n")
+                    .Append(Tab4 + "/// ").Append(text.Value).Append('\n');
+            }
+            else
+            {
+                builder
+                    .Append(Tab4 + "///  <list type=\"table\">\n")
+                    .Append(Tab4 + "///   <listheader>\n")
+                    .Append(Tab4 + "///    <term>Language</term>\n")
+                    .Append(Tab4 + "///    <description>Translation</description>\n")
+                    .Append(Tab4 + "///   </listheader>\n");
+
+                foreach (var translation in translations.Languages)
+                {
+                    if (translation.ContainsModule(text.Module) && translation[text.Module].ContainsEntry(text.Key))
+                    {
+                        var translatedText = translation[text.Module][text.Key];
+
+                        builder
+                            .Append(Tab4 + "///   <item>\n")
+                            .Append(Tab4 + "///    <term>").Append(translation.Language).Append("</term>\n")
+                            .Append(Tab4 + "///    <description>").Append(translatedText.Value).Append("</description>\n")
+                            .Append(Tab4 + "///   </item>\n");
+                    }
+                    else
+                    {
+                        builder
+                            .Append(Tab4 + "///   <item>\n")
+                            .Append(Tab4 + "///    <term>").Append(translation.Language).Append("</term>\n")
+                            .Append(Tab4 + "///    <description><i>Missing translation</i></description>\n")
+                            .Append(Tab4 + "///   </item>\n");
+                    }
+                }
+
+                builder
+                    .Append(Tab4 + "///  </list>\n");
+            }
+
+            builder.Append(Tab4 + "/// </summary>\n");
+        }
     }
 
     private static void AppendTextProp(
@@ -193,28 +275,45 @@ internal static partial class SourceGenerationHelper
     public static string GenerateIdClass(
         StringBuilder builder,
         GeneratorSettings settings,
-        TranslationTableAttributeData translationTable,
-        Dictionary<string, IndexedLocalizedText> defaultDictionary,
-        AllTranslationsData allTranslations)
+        CombinedTranslations<int> translations)
     {
+        if (translations is not { MainTranslation: { } mainTranslation, Table: { } translationTable })
+        {
+            return "// Failed to generate Id class\n";
+        }
 
         builder
             .Append(NullableEnable + UsingTypes)
             .Append("namespace ").Append(translationTable.Namespace).Append("\n")
             .Append("{\n")
-            .Append("    public class ").Append(settings.IdClassName).Append('\n')
-            .Append("    {");
+            .Append("    public static class ").Append("TODO").Append('\n')
+            .Append("    {\n");
 
         if (!settings.GenerateXmlDocs)
         {
             builder.Append('\n');
         }
 
-        foreach (var pair in defaultDictionary)
+        foreach (var module in mainTranslation.Modules)
         {
-            var (key, localizedText) = (pair.Key, pair.Value);
-            AppendIdProp(builder, settings, key, localizedText, allTranslations);
+            // builder.Append("// ").Append(module.Name).Append('\n');
+
+            builder.Append(Tab2 + "public static class ").Append(module.Name).Append("\n")
+                .Append(Tab2 + OpenBrace);
+
+            foreach (var text in module.Texts)
+            {
+                builder.Append(Tab3 + "public static readonly StringResourceId ").Append(text.SourceKey)
+                    .Append(" = new(").Append(text.Key).Append(");\n");
+            }
+
+            builder.Append(Tab2 + CloseBrace + '\n');
         }
+        // foreach (var pair in defaultDictionary)
+        // {
+        //     var (key, localizedText) = (pair.Key, pair.Value);
+        //     AppendIdProp(builder, settings, key, localizedText, allTranslations);
+        // }
 
         builder
             .Append("    }\n")
@@ -285,8 +384,6 @@ internal static partial class SourceGenerationHelper
 
     public static TranslationTableAttributeData? CreateLocalizationTableData(INamedTypeSymbol classSymbol)
     {
-        
-        
         var attributeData = GetAttributeData(classSymbol, LocalizationTableAttributeName);
         if (attributeData is null) return null;
 

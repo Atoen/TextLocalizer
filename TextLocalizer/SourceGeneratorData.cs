@@ -44,14 +44,14 @@ internal readonly record struct TranslationsFileData
     }
 }
 
-internal readonly record struct CombinedGeneratorData
+internal readonly record struct PipelineData
 {
-    public readonly ImmutableArray<ParsedTranslationFile> TranslationFiles;
+    public readonly ImmutableArray<TranslationFile> TranslationFiles;
     public readonly ImmutableArray<TranslationProviderAttributeData> TranslationProviders;
     public readonly TranslationTableAttributeData? TranslationTable;
     public readonly GeneratorSettings GeneratorSettings;
 
-    public CombinedGeneratorData(ImmutableArray<ParsedTranslationFile> translationFiles, ImmutableArray<TranslationProviderAttributeData> translationProviders, TranslationTableAttributeData? translationTable, GeneratorSettings generatorSettings)
+    public PipelineData(ImmutableArray<TranslationFile> translationFiles, ImmutableArray<TranslationProviderAttributeData> translationProviders, TranslationTableAttributeData? translationTable, GeneratorSettings generatorSettings)
     {
         TranslationFiles = translationFiles;
         TranslationProviders = translationProviders;

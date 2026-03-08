@@ -8,6 +8,9 @@ var b = localization.R.UserStatus;
 
 var c = b.ToString();
 
+var d = TODO.Main.HelloWorld;
+
+
 // var a = R5.evening;
 //
 // //var farewellId = R2.farewell;

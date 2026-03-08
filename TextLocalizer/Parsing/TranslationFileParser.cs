@@ -4,7 +4,7 @@ namespace TextLocalizer.Parsing;
 
 internal static class TranslationParser
 {
-    public static ParsedTranslationFile? Parse(TranslationsFileData file, CancellationToken cancellationToken)
+    public static TranslationFile? Parse(TranslationsFileData file, CancellationToken cancellationToken)
     {
         var extension = Path.GetExtension(file.Path);
 
@@ -27,24 +27,27 @@ internal static class TranslationParser
         return (language, module);
     }
 
-    private static ParsedTranslationFile? ParseJson(TranslationsFileData file, CancellationToken cancellationToken)
+    private static TranslationFile? ParseJson(TranslationsFileData file, CancellationToken cancellationToken)
     {
         var (language, module) = ResolveMetadata(file);
 
-        var entries = new List<ParsedTranslationEntry>();
+        var entries = new List<TranslationEntry>();
 
         using var doc = JsonDocument.Parse(file.SourceText.ToString());
 
         foreach (var prop in doc.RootElement.EnumerateObject())
         {
-            entries.Add(new ParsedTranslationEntry(
+            var entry = new TranslationEntry(
                 prop.Name,
-                prop.Value.ToString() ?? "",
+                prop.Value.ToString(),
+                Description: null,
                 Line: 0,
                 IsTemplated: false,
-                IsUntranslatable: false));
+                IsUntranslatable: false);
+
+            entries.Add(entry);
         }
 
-        return new ParsedTranslationFile(language, module, file.Path, entries);
+        return new TranslationFile(language, module, file.Path, entries);
     }
 }

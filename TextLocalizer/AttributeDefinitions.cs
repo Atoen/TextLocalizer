@@ -129,7 +129,7 @@ internal static partial class SourceGenerationHelper
         public StringBuilder AppendIndexer(string currentProviderName, string defaultProviderName)
         {
             return builder
-                .Append('\n' + Tab3 + "public string this[int id]")
+                .Append(Tab3 + "public string this[StringResourceId id]")
                 .Append(" => outer.")
                 .Append(currentProviderName)
                 .Append("[id] ?? outer.")

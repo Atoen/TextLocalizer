@@ -1,6 +1,5 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
-using TextLocalizer.Translations;
 
 namespace TextLocalizer;
 
@@ -60,7 +59,7 @@ internal static class DiagnosticsHelper
         }
     }
 
-    private static readonly DiagnosticDescriptor MissingKeyDescriptor = new(
+    private readonly static DiagnosticDescriptor MissingKeyDescriptor = new(
         id: "TL001",
         title: "Missing item in dictionary",
         messageFormat: "The key '{0}' is missing its translation in {1} file",
@@ -69,7 +68,7 @@ internal static class DiagnosticsHelper
         isEnabledByDefault: true
     );
 
-    private static readonly DiagnosticDescriptor ExtraKeyDescriptor = new(
+    private readonly static DiagnosticDescriptor ExtraKeyDescriptor = new(
         id: "TL002",
         title: "Extra item in dictionary",
         messageFormat: "File {0} contains key '{1}', which is not present in the main translations file",
@@ -78,7 +77,7 @@ internal static class DiagnosticsHelper
         isEnabledByDefault: true
     );
 
-    private static readonly DiagnosticDescriptor UntranslatableKeyDescriptor = new(
+    private readonly static DiagnosticDescriptor UntranslatableKeyDescriptor = new(
         id: "TL003",
         title: "Untranslatable key is localized",
         messageFormat: "File {0} contains key '{1}', which is marked as untranslatable",
@@ -87,7 +86,7 @@ internal static class DiagnosticsHelper
         isEnabledByDefault: true
     );
     
-    private static readonly DiagnosticDescriptor MissingModuleDescriptor = new(
+    private readonly static DiagnosticDescriptor MissingModuleDescriptor = new(
         id: "TL004",
         title: "Missing translation module in non-default language",
         messageFormat: "The module '{0}' is missing in {1} language directory",

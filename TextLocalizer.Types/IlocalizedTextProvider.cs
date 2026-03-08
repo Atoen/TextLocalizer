@@ -2,5 +2,5 @@ namespace TextLocalizer.Types;
 
 public interface ILocalizedTextProvider
 {
-    string? this[StringResourceId key] { get; }
+    string? this[int key] { get; }
 }

@@ -6,9 +6,9 @@ public sealed record SupportedLanguage
     public const string PolishTag = "pl";
     public const string GermanTag = "de";
 
-    public static readonly SupportedLanguage English = new(EnglishTag);
-    public static readonly SupportedLanguage Polish = new(PolishTag);
-    public static readonly SupportedLanguage German = new(GermanTag);
+    public readonly static SupportedLanguage English = new(EnglishTag);
+    public readonly static SupportedLanguage Polish = new(PolishTag);
+    public readonly static SupportedLanguage German = new(GermanTag);
 
     public string Tag { get; }
 
