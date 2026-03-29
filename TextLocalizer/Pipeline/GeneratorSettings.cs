@@ -1,15 +1,15 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace TextLocalizer;
+namespace TextLocalizer.Pipeline;
 
-internal record GeneratorSettings
+public record GeneratorSettings
 {
     public static class Defaults
     {
         public const string TranslationsDir = "Translations";
         public const bool EnableLogging = false;
-        public const string LanguageName = "english";
+        public const string MainLanguage = "en";
         public const bool StrictMode = false;
         public const bool GenerateXmlDocs = true;
         public const bool GenerateIdClass = true;
@@ -22,7 +22,7 @@ internal record GeneratorSettings
 
         internal const string TranslationsDir = BuildPropertyPrefix + nameof(TranslationsDir);
         internal const string EnableLogging   = BuildPropertyPrefix + nameof(EnableLogging);
-        internal const string DefaultLanguage = BuildPropertyPrefix + nameof(DefaultLanguage);
+        internal const string MainLanguage    = BuildPropertyPrefix + nameof(MainLanguage);
         internal const string StrictMode      = BuildPropertyPrefix + nameof(StrictMode);
         internal const string GenerateXmlDocs = BuildPropertyPrefix + nameof(GenerateXmlDocs);
         internal const string GenerateIdClass = BuildPropertyPrefix + nameof(GenerateIdClass);
@@ -39,7 +39,7 @@ internal record GeneratorSettings
     public GeneratorSettings(
         string translationsDir,
         bool enableLogging,
-        string defaultLanguage,
+        string mainLanguage,
         bool strictMode,
         bool generateXmlDocs,
         bool generateIdClass,
@@ -47,7 +47,7 @@ internal record GeneratorSettings
     {
         TranslationsDir = translationsDir;
         EnableLogging = enableLogging;
-        DefaultLanguage = defaultLanguage;
+        MainLanguage = mainLanguage;
         StrictMode = strictMode;
         GenerateXmlDocs = generateXmlDocs;
         GenerateIdClass = generateIdClass;
@@ -56,7 +56,7 @@ internal record GeneratorSettings
 
     public string TranslationsDir { get; }
     public bool EnableLogging { get; }
-    public string DefaultLanguage { get; }
+    public string MainLanguage { get; }
     public bool StrictMode { get; }
     public bool GenerateXmlDocs { get; }
     public bool GenerateIdClass { get; }
@@ -77,9 +77,9 @@ internal static class GeneratorSettingsHelper
                 GeneratorSettings.PropertyNames.EnableLogging,
                 GeneratorSettings.Defaults.EnableLogging);
 
-            var defaultLanguage = options.GetValueOrDefault(
-                GeneratorSettings.PropertyNames.DefaultLanguage,
-                GeneratorSettings.Defaults.LanguageName);
+            var mainLanguage = options.GetValueOrDefault(
+                GeneratorSettings.PropertyNames.MainLanguage,
+                GeneratorSettings.Defaults.MainLanguage);
 
             var strictMode = options.GetValueOrDefault(
                 GeneratorSettings.PropertyNames.StrictMode,
@@ -97,7 +97,9 @@ internal static class GeneratorSettingsHelper
                 GeneratorSettings.PropertyNames.IdClassName,
                 GeneratorSettings.Defaults.IdClassName);
 
-            return new GeneratorSettings(translationsDir, enableLogging, defaultLanguage, strictMode, generateXmlDocs, generateIdClass, idClassName);
+            // throw new Exception("Id class: " + idClassName);
+
+            return new GeneratorSettings(translationsDir, enableLogging, mainLanguage, strictMode, generateXmlDocs, generateIdClass, idClassName);
         }
     }
 }

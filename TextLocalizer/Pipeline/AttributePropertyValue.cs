@@ -1,7 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace TextLocalizer;
+namespace TextLocalizer.Pipeline;
 
 internal record struct AttributePropertyValue<T>
 {

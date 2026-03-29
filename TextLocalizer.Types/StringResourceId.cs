@@ -2,16 +2,16 @@
 
 public readonly record struct StringResourceId
 {
-    public readonly int Id;
+    private readonly int _value;
 
-    public StringResourceId(int id)
+    public StringResourceId(int value)
     {
-        Id = id;
+        _value = value;
     }
 
     public static implicit operator int(StringResourceId stringResourceId)
     {
-        return stringResourceId.Id;
+        return stringResourceId._value;
     }
 
     public static explicit operator StringResourceId(int id)

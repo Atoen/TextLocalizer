@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace TextLocalizer.Parsing;
 
 internal sealed record TranslationFile(
@@ -6,6 +8,7 @@ internal sealed record TranslationFile(
     string Path,
     IReadOnlyList<TranslationEntry> Entries);
 
+[TypeForwardedFrom("TextLocalizer.Types")]
 internal sealed record TranslationEntry(
     string Key,
     string Value,

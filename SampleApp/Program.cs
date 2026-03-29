@@ -2,28 +2,51 @@
 
 var localization = new Localization();
 
-var a = localization.R.Main.HelloWorld;
+Console.WriteLine(localization.R.UserStatus.online());
 
-var b = localization.R.UserStatus;
+var b = R.Main.HelloWorld;
 
-var c = b.ToString();
+Console.WriteLine(localization.R[R.Main.Oro]);
 
-var d = TODO.Main.HelloWorld;
+var a = new PolishTextProvider();
 
+localization.SetLanguage(SupportedLanguage.Polish);
 
-// var a = R5.evening;
-//
-// //var farewellId = R2.farewell;
-// //Console.WriteLine(localization.R[farewellId]);
-//
-// //var message = localization.StringResource(R2.templated, true);
-// //Console.WriteLine(message);
-//
-// Console.WriteLine(localization.R.greetings);
-//
-// localization.SetLanguage(SupportedLanguage.Polish);
-// Console.WriteLine(localization.R.greetings);
-//
-// localization.SetLanguage(SupportedLanguage.German);
-// Console.WriteLine(localization.R.evening);
-// Console.WriteLine(localization.R.untranslated_key);
+Console.WriteLine(localization.R.Ooro.oro2);
+
+var status = localization.R.UserStatus;
+
+Console.WriteLine(localization.Language);
+Console.WriteLine(status.online);
+Console.WriteLine(status.doNotDisturb);
+Console.WriteLine(status.away);
+
+Console.WriteLine();
+
+Console.WriteLine(localization.R.Main.HelloWorld);
+
+Console.WriteLine();
+
+localization.SetLanguage(SupportedLanguage.English);
+
+Console.WriteLine(localization.Language);
+Console.WriteLine(status.online);
+Console.WriteLine(status.doNotDisturb);
+Console.WriteLine(status.away);
+
+Console.WriteLine();
+
+Console.WriteLine(localization.R.Main.HelloWorld);
+
+Console.WriteLine();
+
+localization.SetLanguage(SupportedLanguage.German);
+
+Console.WriteLine(localization.Language);
+Console.WriteLine(status.online);
+Console.WriteLine(status.doNotDisturb);
+Console.WriteLine(status.away);
+
+Console.WriteLine();
+
+Console.WriteLine(localization.R.Main.HelloWorld);

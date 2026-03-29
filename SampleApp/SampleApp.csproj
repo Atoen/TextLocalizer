@@ -9,7 +9,7 @@
 
     <PropertyGroup>
         <TextLocalizerTranslationsDir>Translations</TextLocalizerTranslationsDir>
-        <TextLocalizerDefaultLanguage>pl</TextLocalizerDefaultLanguage>
+        <TextLocalizerMainLanguage>pl</TextLocalizerMainLanguage>
         <TextLocalizerGenerateXmlDocs>true</TextLocalizerGenerateXmlDocs>
         <TextLocalizerGenerateIdClass>true</TextLocalizerGenerateIdClass>
     </PropertyGroup>
@@ -20,7 +20,7 @@
 
     <ItemGroup>
         <CompilerVisibleProperty Include="TextLocalizerTranslationsDir" />
-        <CompilerVisibleProperty Include="TextLocalizerDefaultLanguage" />
+        <CompilerVisibleProperty Include="TextLocalizerMainLanguage" />
         <CompilerVisibleProperty Include="TextLocalizerStrictMode" />
         <CompilerVisibleProperty Include="TextLocalizerGenerateXmlDocs" />
         <CompilerVisibleProperty Include="TextLocalizerEnableLogging" />

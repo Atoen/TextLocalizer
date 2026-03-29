@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace TextLocalizer;
+namespace TextLocalizer.Pipeline;
 
-internal static class Extensions
+internal static class AnalyzerConfigExtensions
 {
     extension(AnalyzerConfigOptions analyzerConfigOptions)
     {
@@ -21,7 +21,7 @@ internal static class Extensions
             {
                 if (targetType == typeof(string))
                 {
-                    return Unsafe.As<string, T>(ref rawValue);
+                    return string.IsNullOrWhiteSpace(rawValue) ? defaultValue : Unsafe.As<string, T>(ref rawValue);
                 }
 
                 if (targetType == typeof(bool))

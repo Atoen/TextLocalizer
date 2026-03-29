@@ -1,4 +1,5 @@
 using System.Text.Json;
+using TextLocalizer.Pipeline;
 
 namespace TextLocalizer.Parsing;
 
@@ -42,7 +43,7 @@ internal static class TranslationParser
                 prop.Value.ToString(),
                 Description: null,
                 Line: 0,
-                IsTemplated: false,
+                IsTemplated: prop.Name == "online",
                 IsUntranslatable: false);
 
             entries.Add(entry);
