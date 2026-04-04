@@ -24,6 +24,7 @@ public static class TextProviderBuilder
             .AppendProviderClassName(provider.ClassName)
             .Append(Tab1 + OpenBrace)
             .Append(Tab2 + Indexer)
+            .AppendIsDefaultProperty(translation.IsDefault)
             .Append('\n' + Tab2 + ArrayDeclaration)
             .Append(Tab2 + '{');
 
@@ -44,7 +45,7 @@ public static class TextProviderBuilder
             }
             else
             {
-                builder.Append("@\"\"\"").Append(text).Append("\"\"\",");
+                builder.Append("@\"").Append(text).Append("\",");
             }
         }
 
@@ -61,5 +62,17 @@ public static class TextProviderBuilder
         builder.Clear();
 
         return result;
+    }
+
+    extension(StringBuilder builder)
+    {
+        private StringBuilder AppendIsDefaultProperty(bool isDefault)
+        {
+            var value = isDefault ? "true" : "false";
+            
+            return builder
+                .Append('\n' + Tab2 + "public bool IsDefault => ")
+                .Append(value).Append(";\n");
+        }
     }
 }

@@ -30,24 +30,22 @@ public static class IdClassBuilder
 
         foreach (var module in mainTranslation.Modules)
         {
-            // builder.Append("// ").Append(module.Name).Append('\n');
-
             builder.Append(Tab2 + "public static class ").Append(module.Name).Append("\n")
                 .Append(Tab2 + OpenBrace);
 
             foreach (var text in module.Texts)
             {
+                if (settings.GenerateXmlDocs)
+                {
+                    builder.AddXmlDocs(text, translations);
+                }
+                
                 builder.Append(Tab3 + "public static readonly StringResourceId ").Append(text.SourceKey)
                     .Append(" = new(").Append(text.Key).Append(");\n");
             }
 
             builder.Append(Tab2 + CloseBrace + '\n');
         }
-        // foreach (var pair in defaultDictionary)
-        // {
-        //     var (key, localizedText) = (pair.Key, pair.Value);
-        //     AppendIdProp(builder, settings, key, localizedText, allTranslations);
-        // }
 
         builder
             .Append("    }\n")

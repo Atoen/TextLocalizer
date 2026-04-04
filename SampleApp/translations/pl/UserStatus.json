@@ -1,6 +1,14 @@
 {
   "online": "Online",
-  "offline": "Offline",
-  "away": "Nieobecny",
-  "doNotDisturb": "Zajęty"
+  "offline": "Offline{}",
+  "away": {
+    "value": "Zaraz wracam",
+    "untranslatable": true
+  },
+  "doNotDisturb": {
+    "value": "Zajęty",
+    "templated": true,
+    "untranslatable": true,
+    "description": "desc"
+  }
 }

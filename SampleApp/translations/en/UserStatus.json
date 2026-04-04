@@ -2,5 +2,10 @@
   "away": "Away",
   "online": "Online",
   "offline": "Offline",
-  "doNotDisturb": "Do not disturb"
+  "doNotDisturb": {
+    "value": "Do not disturb",
+    "templated": true,
+    "untranslatable": true,
+    "description": "desc"
+  }
 }

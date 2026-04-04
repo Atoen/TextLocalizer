@@ -31,23 +31,6 @@ public partial class Localization
         _provider = GetLanguageProvider(Language);
     }
 
-    public string StringResource(StringResourceId id) => R[id];
-
-    public string StringResource(StringResourceId id, object? arg0)
-    {
-        return string.Format(R[id], arg0);
-    }
-
-    public string StringResource(StringResourceId id, object? arg0, object? arg1)
-    {
-        return string.Format(R[id], arg0, arg1);
-    }
-
-    public string StringResource(StringResourceId id, params ReadOnlySpan<object?> args)
-    {
-        return string.Format(R[id], args);
-    }
-
     private static ILocalizedTextProvider CreateProvider(SupportedLanguage language) => language.Tag switch
     {
         SupportedLanguage.EnglishTag => new EnglishTextProvider(),
