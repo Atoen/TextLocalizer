@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": {
+    "$ref": "#/$defs/translationEntry"
+  },
+
+  "$defs": {
+    "translationEntry": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "plural": {
+              "$ref": "#/$defs/pluralObject"
+            },
+            "templated": {
+              "type": "boolean"
+            },
+            "untranslatable": {
+              "type": "boolean"
+            },
+            "description": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "oneOf": [
+            { "required": ["value"] },
+            { "required": ["plural"] }
+          ]
+        }
+      ]
+    },
+
+    "pluralObject": {
+      "type": "object",
+      "properties": {
+        "zero": { "type": "string" },
+        "one": { "type": "string" },
+        "two": { "type": "string" },
+        "few": { "type": "string" },
+        "many": { "type": "string" },
+        "other": { "type": "string" }
+      },
+      "required": ["other"],
+      "additionalProperties": false
+    }
+  }
+}
