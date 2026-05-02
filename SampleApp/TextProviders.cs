@@ -4,30 +4,21 @@ using TextLocalizer.Types;
 namespace SampleApp;
 
 [TranslationProvider(Language = "en")]
-public partial class EnglishTextProvider
-{
-    public PluralCategory GetPluralCategory(int count)
-    {
-        count = Math.Abs(count);
-        return count == 1
-            ? PluralCategory.One
-            : PluralCategory.Other;
-    }
-}
+public partial class EnglishTextProvider;
 
 [TranslationProvider(Language = "pl")]
 public partial class PolishTextProvider
 {
-    public PluralCategory GetPluralCategory(int count)
+    public override PluralCategory GetPluralCategory(int count)
     {
-        count = Math.Abs(count);
-        if (count == 1)
+        var abs = Math.Abs(count);
+        if (abs == 1)
         {
             return PluralCategory.One;
         }
 
-        var mod10 = count % 10;
-        var mod100 = count % 100;
+        var mod10 = abs % 10;
+        var mod100 = abs % 100;
 
         if (mod10 is >= 2 and <= 4 && mod100 is < 12 or > 14)
         {
@@ -39,13 +30,4 @@ public partial class PolishTextProvider
 }
 
 [TranslationProvider(Language = "de")]
-public partial class GermanTextProvider
-{
-    public PluralCategory GetPluralCategory(int count)
-    {
-        count = Math.Abs(count);
-        return count == 1
-            ? PluralCategory.One
-            : PluralCategory.Other;
-    }
-}
+public partial class GermanTextProvider;

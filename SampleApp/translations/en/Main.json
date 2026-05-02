@@ -55,8 +55,15 @@
   "Yesterday": "Yesterday",
   "Tomorrow": "Tomorrow",
   "WelcomeUser": "Welcome, {0}!",
-  "ItemsCount": "You have {0} items",
   "Processing": "Processing...",
   "Completed": "Completed",
-  "Failed": "Failed"
+  "Failed": "Failed",
+  "ItemsCount": {
+    "plural": {
+      "one": "{0} element",
+      "other": "{0} elements"
+    },
+    "templated": true,
+    "description": "Number of items j"
+  }
 }

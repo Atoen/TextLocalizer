@@ -10,14 +10,14 @@ namespace SampleApp;
 )]
 public partial class Localization
 {
-    private readonly Dictionary<SupportedLanguage, ILocalizedTextProvider> _textProviders = new();
+    private readonly Dictionary<SupportedLanguage, LocalizedTextProvider> _textProviders = new();
 
     public static SupportedLanguage DefaultLanguage { get; set; } = SupportedLanguage.Polish;
 
     public SupportedLanguage Language { get; private set; } = DefaultLanguage;
 
-    private readonly ILocalizedTextProvider _defaultProvider;
-    private ILocalizedTextProvider _provider;
+    private readonly LocalizedTextProvider _defaultProvider;
+    private LocalizedTextProvider _provider;
 
     public Localization()
     {
@@ -31,7 +31,7 @@ public partial class Localization
         _provider = GetLanguageProvider(Language);
     }
 
-    private static ILocalizedTextProvider CreateProvider(SupportedLanguage language) => language.Tag switch
+    private static LocalizedTextProvider CreateProvider(SupportedLanguage language) => language.Tag switch
     {
         SupportedLanguage.EnglishTag => new EnglishTextProvider(),
         SupportedLanguage.PolishTag => new PolishTextProvider(),
@@ -39,7 +39,7 @@ public partial class Localization
         _ => throw new ArgumentOutOfRangeException(nameof(language))
     };
 
-    private ILocalizedTextProvider GetLanguageProvider(SupportedLanguage language)
+    private LocalizedTextProvider GetLanguageProvider(SupportedLanguage language)
     {
         if (_textProviders.TryGetValue(language, out var provider))
         {

@@ -1,3 +1,5 @@
+using TextLocalizer.Parsing;
+
 namespace TextLocalizer.Translations;
 
 public record TranslationText<TKey>(TKey Key, string Value) where TKey : IEquatable<TKey>
@@ -8,4 +10,7 @@ public record TranslationText<TKey>(TKey Key, string Value) where TKey : IEquata
     public string? Description { get; init; }
     public bool IsUntranslatable { get; init; }
     public bool IsTemplated { get; init; }
+    public bool SupportsPluralization => Plurals is not null;
+    
+    public Dictionary<PluralCategory, string>? Plurals { get; init; }
 }

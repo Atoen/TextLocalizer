@@ -9,3 +9,10 @@ public enum PluralCategory
     Many,
     Other
 }
+
+public enum Gender
+{
+    Male,
+    Female,
+    Other
+}

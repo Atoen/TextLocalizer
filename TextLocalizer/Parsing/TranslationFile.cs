@@ -15,4 +15,18 @@ internal sealed record TranslationEntry(
     int Line,
     string? Description,
     bool IsTemplated,
-    bool IsUntranslatable);
+    bool IsUntranslatable,
+    Dictionary<PluralCategory, string>? Plurals)
+{
+    public bool SupportsPluralization => Plurals is not null;
+}
+    
+public enum PluralCategory
+{
+    Zero,
+    One,
+    Two,
+    Few,
+    Many,
+    Other
+}

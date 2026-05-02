@@ -212,7 +212,8 @@ internal class Generator : IIncrementalGenerator
                         Description = entry.Description,
                         IsTemplated = entry.IsTemplated,
                         IsUntranslatable = entry.IsUntranslatable,
-                        Module = module.Name
+                        Module = module.Name,
+                        Plurals = entry.Plurals
                     };
 
                     module.AddText(text);

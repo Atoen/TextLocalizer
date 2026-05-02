@@ -41,20 +41,52 @@ public static class TranslationTableBuilder
                     builder.AddXmlDocs(text, translations, 4);
                 }
 
-                if (text.IsTemplated)
+                if (text.SupportsPluralization)
                 {
-                    builder
-                        .Append(Tab4 + "public string ").Append(text.SourceKey).Append("(params ReadOnlySpan<object?> args)\n" + Tab4 + "{\n")
-                        .Append(Tab5 + "var value = ")
-                        .AppendProviderAccess(translationTable, text).Append('\n')
-                        .Append(Tab5 + "return string.Format(value, args);\n")
-                        .Append(Tab4 + "}\n");
+                    if (text.IsTemplated)
+                    {
+                        builder
+                            .Append(Tab4 + "public string ").Append(text.SourceKey).Append("(int count)\n" + Tab4 + "{\n")
+                        
+                            .Append(Tab5 + "var provider = outer.").Append(translationTable.Provider)
+                            .Append("[").Append(text.Key).Append("] != null ? outer.").Append(translationTable.Provider)
+                            .Append(" : outer.").Append(translationTable.DefaultProvider).Append(";\n")
+                        
+                            .Append(Tab5 + "return string.Format(provider.Get(").Append(text.Key).Append(", count)!, count);\n")
+                        
+                            .Append(Tab4 + "}\n");
+                    }
+                    else
+                    {
+                        builder
+                            .Append(Tab4 + "public string ").Append(text.SourceKey).Append("(int count)\n" + Tab4 + "{\n")
+                        
+                            .Append(Tab5 + "var provider = outer.").Append(translationTable.Provider)
+                            .Append("[").Append(text.Key).Append("] != null ? outer.").Append(translationTable.Provider)
+                            .Append(" : outer.").Append(translationTable.DefaultProvider).Append(";\n")
+                        
+                            .Append(Tab5 + "return provider.Get(").Append(text.Key).Append(", count)!;\n")
+                        
+                            .Append(Tab4 + "}\n");
+                    }
                 }
                 else
                 {
-                    builder
-                        .Append(Tab4 + "public string ").Append(text.SourceKey).Append(" => ")
-                        .AppendProviderAccess(translationTable, text).Append('\n');
+                    if (text.IsTemplated)
+                    {
+                        builder
+                            .Append(Tab4 + "public string ").Append(text.SourceKey).Append("(params ReadOnlySpan<object?> args)\n" + Tab4 + "{\n")
+                            .Append(Tab5 + "var value = ")
+                            .AppendProviderAccess(translationTable, text).Append('\n')
+                            .Append(Tab5 + "return string.Format(value, args);\n")
+                            .Append(Tab4 + "}\n");
+                    }
+                    else
+                    {
+                        builder
+                            .Append(Tab4 + "public string ").Append(text.SourceKey).Append(" => ")
+                            .AppendProviderAccess(translationTable, text).Append('\n');
+                    }
                 }
             }
 
@@ -84,14 +116,14 @@ public static class TranslationTableBuilder
             {
                 builder
                     .Append("outer.").Append(table.DefaultProvider)
-                    .Append("[").Append(text.Key).Append("]!;");
+                    .Append(".Get(").Append(text.Key).Append(")!;");
             }
             else
             {
                 builder
                     .Append("outer.").Append(table.Provider)
-                    .Append("[").Append(text.Key).Append("] ?? outer.").Append(table.DefaultProvider)
-                    .Append("[").Append(text.Key).Append("]!;");
+                    .Append(".Get(").Append(text.Key).Append(") ?? outer.").Append(table.DefaultProvider)
+                    .Append(".Get(").Append(text.Key).Append(")!;");
             }
             
             return builder;
@@ -103,9 +135,9 @@ public static class TranslationTableBuilder
                 .Append(Tab3 + "public string this[StringResourceId id]")
                 .Append(" => outer.")
                 .Append(currentProviderName)
-                .Append("[id] ?? outer.")
+                .Append(".Get(id) ?? outer.")
                 .Append(defaultProviderName)
-                .Append("[id]!;\n");
+                .Append(".Get(id)!;\n");
         }
 
         private StringBuilder AppendTextTableFieldCtor(string tableName, string className)

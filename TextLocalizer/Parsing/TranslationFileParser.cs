@@ -29,85 +29,172 @@ internal static class TranslationParser
         return (language, module);
     }
     
-    private static TranslationFile? ParseJson(TranslationsFileData file, CancellationToken cancellationToken)
+private static TranslationFile? ParseJson(TranslationsFileData file, CancellationToken cancellationToken)
+{
+    var (language, module) = ResolveMetadata(file);
+
+    var entries = new List<TranslationEntry>();
+
+    var json = file.SourceText.ToString();
+    var bytes = Encoding.UTF8.GetBytes(json);
+
+    var lineStarts = GetLineStarts(bytes);
+
+    using var doc = JsonDocument.Parse(json);
+
+    foreach (var prop in doc.RootElement.EnumerateObject())
     {
-        var (language, module) = ResolveMetadata(file);
+        cancellationToken.ThrowIfCancellationRequested();
 
-        var entries = new List<TranslationEntry>();
+        var key = prop.Name;
+        // var line = FindLineNumber(json, key, lineStarts);
 
-        var json = file.SourceText.ToString();
-        var bytes = Encoding.UTF8.GetBytes(json);
+        string? value = null;
+        Dictionary<PluralCategory, string>? plural = null;
 
-        var reader = new Utf8JsonReader(bytes, isFinalBlock: true, state: default);
-        
-        var lineStarts = GetLineStarts(bytes);
+        string? description = null;
+        bool isTemplated = false;
+        bool isUntranslatable = false;
 
-        while (reader.Read())
+        if (prop.Value.ValueKind == JsonValueKind.String)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            value = prop.Value.GetString();
+            isTemplated = DetectTemplated(value!);
+        }
+        else if (prop.Value.ValueKind == JsonValueKind.Object)
+        {
+            var obj = prop.Value;
 
-            if (reader.TokenType == JsonTokenType.PropertyName)
+            // 🔹 PLURAL SUPPORT
+            if (obj.TryGetProperty("plural", out var pluralProp))
             {
-                var key = reader.GetString()!;
-                
-                var line = GetLineNumber(reader.TokenStartIndex, lineStarts);
-                
-                reader.Read();
+                plural = new Dictionary<PluralCategory, string>();
 
-                var value = string.Empty;
-                string? description = null;
-                var isTemplated = false;
-                var isUntranslatable = false;
-
-                if (reader.TokenType == JsonTokenType.String)
+                foreach (var pluralEntry in pluralProp.EnumerateObject())
                 {
-                    value = reader.GetString()!;
-                    isTemplated = DetectTemplated(value);
-                }
-                else if (reader.TokenType == JsonTokenType.StartObject)
-                {
-                    while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
-                    {
-                        if (reader.TokenType != JsonTokenType.PropertyName)
-                            continue;
+                    var category = ParsePluralCategory(pluralEntry.Name);
+                    var text = pluralEntry.Value.GetString()!;
 
-                        var innerKey = reader.GetString()!;
-                        reader.Read();
-
-                        switch (innerKey)
-                        {
-                            case "value":
-                                value = reader.GetString()!;
-                                break;
-                            case "description":
-                                description = reader.GetString();
-                                break;
-                            case "templated":
-                                isTemplated = reader.GetBoolean();
-                                break;
-                            case "untranslatable":
-                                isUntranslatable = reader.GetBoolean();
-                                break;
-                        }
-                    }
-                }
-                else
-                {
-                    throw new FormatException($"Invalid value for key '{key}'");
+                    plural[category] = text;
                 }
 
-                entries.Add(new TranslationEntry(
-                    key,
-                    value,
-                    Description: description,
-                    Line: line,
-                    IsTemplated: isTemplated,
-                    IsUntranslatable: isUntranslatable));
+                // infer templating if not explicitly set
+                isTemplated = plural.Values.Any(DetectTemplated);
+            }
+            else if (obj.TryGetProperty("value", out var valueProp))
+            {
+                value = valueProp.GetString();
+                isTemplated = DetectTemplated(value!);
+            }
+
+            if (obj.TryGetProperty("description", out var descProp))
+            {
+                description = descProp.GetString();
+            }
+
+            if (obj.TryGetProperty("templated", out var templatedProp))
+            {
+                isTemplated = templatedProp.GetBoolean();
+            }
+
+            if (obj.TryGetProperty("untranslatable", out var untranslatableProp))
+            {
+                isUntranslatable = untranslatableProp.GetBoolean();
             }
         }
 
-        return new TranslationFile(language, module, file.Path, entries);
+        // validation
+        if (value is null && plural is null)
+            throw new FormatException($"Entry '{key}' must have either 'value' or 'plural'");
+
+        if (plural != null && !plural.ContainsKey(PluralCategory.Other))
+            throw new FormatException($"Plural entry '{key}' must contain 'other' category");
+
+        entries.Add(new TranslationEntry(
+            key, value ?? string.Empty, 0, description, isTemplated, isUntranslatable, plural));
     }
+
+    return new TranslationFile(language, module, file.Path, entries);
+}
+    
+    // private static TranslationFile? ParseJson(TranslationsFileData file, CancellationToken cancellationToken)
+    // {
+    //     var (language, module) = ResolveMetadata(file);
+    //
+    //     var entries = new List<TranslationEntry>();
+    //
+    //     var json = file.SourceText.ToString();
+    //     var bytes = Encoding.UTF8.GetBytes(json);
+    //
+    //     var reader = new Utf8JsonReader(bytes, isFinalBlock: true, state: default);
+    //     
+    //     var lineStarts = GetLineStarts(bytes);
+    //
+    //     while (reader.Read())
+    //     {
+    //         cancellationToken.ThrowIfCancellationRequested();
+    //
+    //         if (reader.TokenType == JsonTokenType.PropertyName)
+    //         {
+    //             var key = reader.GetString()!;
+    //             
+    //             var line = GetLineNumber(reader.TokenStartIndex, lineStarts);
+    //             
+    //             reader.Read();
+    //
+    //             var value = string.Empty;
+    //             string? description = null;
+    //             var isTemplated = false;
+    //             var isUntranslatable = false;
+    //
+    //             if (reader.TokenType == JsonTokenType.String)
+    //             {
+    //                 value = reader.GetString()!;
+    //                 isTemplated = DetectTemplated(value);
+    //             }
+    //             else if (reader.TokenType == JsonTokenType.StartObject)
+    //             {
+    //                 while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+    //                 {
+    //                     if (reader.TokenType != JsonTokenType.PropertyName)
+    //                         continue;
+    //
+    //                     var innerKey = reader.GetString()!;
+    //                     reader.Read();
+    //
+    //                     switch (innerKey)
+    //                     {
+    //                         case "value":
+    //                             value = reader.GetString()!;
+    //                             break;
+    //                         case "description":
+    //                             description = reader.GetString();
+    //                             break;
+    //                         case "templated":
+    //                             isTemplated = reader.GetBoolean();
+    //                             break;
+    //                         case "untranslatable":
+    //                             isUntranslatable = reader.GetBoolean();
+    //                             break;
+    //                     }
+    //                 }
+    //             }
+    //
+    //
+    //             entries.Add(new TranslationEntry(
+    //                 key,
+    //                 value,
+    //                 Description: description,
+    //                 Line: line,
+    //                 IsTemplated: isTemplated,
+    //                 IsUntranslatable: isUntranslatable,
+    //                 SupportsPluralization: key == "ItemsCount"));
+    //         }
+    //     }
+    //
+    //     return new TranslationFile(language, module, file.Path, entries);
+    // }
+    
     private static List<long> GetLineStarts(byte[] bytes)
     {
         var result = new List<long> { 0 };
@@ -140,4 +227,15 @@ internal static class TranslationParser
     {
         return value.IndexOf('{') >= 0 && value.IndexOf('}') > value.IndexOf('{');
     }
+    
+    private static PluralCategory ParsePluralCategory(string key) => key switch
+    {
+        "zero" => PluralCategory.Zero,
+        "one" => PluralCategory.One,
+        "two" => PluralCategory.Two,
+        "few" => PluralCategory.Few,
+        "many" => PluralCategory.Many,
+        "other" => PluralCategory.Other,
+        _ => throw new FormatException($"Unknown plural category '{key}'")
+    };
 }

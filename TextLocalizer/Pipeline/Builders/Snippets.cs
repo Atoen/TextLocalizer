@@ -1,7 +1,6 @@
 using System.Security;
 using System.Text;
 using TextLocalizer.Translations;
-using TextLocalizer.Types;
 
 namespace TextLocalizer.Pipeline.Builders;
 
@@ -36,7 +35,7 @@ public static class Snippets
             return builder
                 .Append(Tab1 + "public partial class ")
                 .Append(className)
-                .Append(" : " + nameof(ILocalizedTextProvider) + "\n");
+                .Append(" : LocalizedTextProvider\n");
         }
 
         public StringBuilder AppendTranslationTableClassName(string className)
